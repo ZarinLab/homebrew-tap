@@ -1,8 +1,8 @@
 class Doppeldock < Formula
   desc "Second, separately signed-in copy of an Electron app with its own Dock icon"
   homepage "https://zarinlab.github.io/doppeldock/"
-  url "https://github.com/ZarinLab/doppeldock/releases/download/v1.1.1/doppeldock-1.1.1.tar.gz"
-  sha256 "6188d6742a4bbcab09d7b4d8dc0ce6cc03704beb5fcc6e2497f7b2501bc86b41"
+  url "https://github.com/ZarinLab/doppeldock/releases/download/v1.1.2/doppeldock-1.1.2.tar.gz"
+  sha256 "d8e916b381a62e462099762bc8904d4a9148aaa5bb869dd53ff8dd94008cb2c7"
   license "MIT"
 
   depends_on :macos
