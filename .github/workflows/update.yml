@@ -25,7 +25,10 @@ jobs:
           persist-credentials: false
       - id: check
         name: Compare the formula with the latest release
-        run: echo "version=$(.github/scripts/update-doppeldock.sh)" >> "$GITHUB_OUTPUT"
+        # A separate assignment, so a failing script fails the step.
+        run: |
+          version="$(.github/scripts/update-doppeldock.sh)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
   update:
     name: Test and commit the update
