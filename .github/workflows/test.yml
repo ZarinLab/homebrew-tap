@@ -10,6 +10,22 @@ permissions:
   contents: read
 
 jobs:
+  workflows:
+    name: Workflow security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: shellcheck
+        run: shellcheck -s bash .github/scripts/*.sh
+      - name: actionlint
+        run: pipx run --spec actionlint-py==1.7.12.25 actionlint -color
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pipx run zizmor==1.32.0 --format=github .
+
   test:
     name: Install, test and audit
     runs-on: macos-latest
@@ -18,13 +34,10 @@ jobs:
       HOMEBREW_NO_INSTALL_CLEANUP: "1"
       HOMEBREW_NO_ENV_HINTS: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: shellcheck
-        run: |
-          brew install shellcheck
-          shellcheck -s bash .github/scripts/*.sh
+          persist-credentials: false
       - name: doppeldock
         run: |
           brew tap zarinlab/tap "$GITHUB_WORKSPACE"

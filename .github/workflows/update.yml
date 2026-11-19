@@ -5,8 +5,7 @@ on:
     - cron: "23 */6 * * *"   # every 6 hours
   workflow_dispatch:
 
-permissions:
-  contents: write
+permissions: {}
 
 concurrency:
   group: update-formulae
@@ -16,10 +15,14 @@ jobs:
   check:
     name: Check for a new release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.check.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - id: check
         name: Compare the formula with the latest release
         run: echo "version=$(.github/scripts/update-doppeldock.sh)" >> "$GITHUB_OUTPUT"
@@ -29,21 +32,25 @@ jobs:
     needs: check
     if: needs.check.outputs.version != ''
     runs-on: macos-latest
+    permissions:
+      contents: write   # push the updated formula
     env:
+      VERSION: ${{ needs.check.outputs.version }}
       HOMEBREW_NO_AUTO_UPDATE: "1"
       HOMEBREW_NO_INSTALL_CLEANUP: "1"
       HOMEBREW_NO_ENV_HINTS: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: true   # needed for the final git push  # zizmor: ignore[artipacked]
 
-      - name: Update the formula to ${{ needs.check.outputs.version }} (local commit)
+      - name: Update the formula (local commit)
         run: |
-          .github/scripts/update-doppeldock.sh "${{ needs.check.outputs.version }}"
+          .github/scripts/update-doppeldock.sh "$VERSION"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "doppeldock ${{ needs.check.outputs.version }}"
+          git commit -am "doppeldock $VERSION"
 
       # brew tap clones the committed history, so this tests the new commit.
       - name: Install, test and audit
@@ -51,7 +58,7 @@ jobs:
           brew tap zarinlab/tap "$GITHUB_WORKSPACE"
           brew trust --formula zarinlab/tap/doppeldock
           brew install zarinlab/tap/doppeldock
-          doppeldock --version | grep -F "DoppelDock ${{ needs.check.outputs.version }}"
+          doppeldock --version | grep -F "DoppelDock $VERSION"
           brew test zarinlab/tap/doppeldock
           brew audit --strict --online zarinlab/tap/doppeldock
 

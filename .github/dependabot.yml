@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Keeps the commit-pinned actions in .github/workflows up to date.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14   # only suggest releases that have been out for two weeks
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
