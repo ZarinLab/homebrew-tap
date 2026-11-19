@@ -1,0 +1,59 @@
+name: Update formulae
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"   # every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-formulae
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check for a new release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        name: Compare the formula with the latest release
+        run: echo "version=$(.github/scripts/update-doppeldock.sh)" >> "$GITHUB_OUTPUT"
+
+  update:
+    name: Test and commit the update
+    needs: check
+    if: needs.check.outputs.version != ''
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      HOMEBREW_NO_ENV_HINTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update the formula to ${{ needs.check.outputs.version }} (local commit)
+        run: |
+          .github/scripts/update-doppeldock.sh "${{ needs.check.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "doppeldock ${{ needs.check.outputs.version }}"
+
+      # brew tap clones the committed history, so this tests the new commit.
+      - name: Install, test and audit
+        run: |
+          brew tap zarinlab/tap "$GITHUB_WORKSPACE"
+          brew trust --formula zarinlab/tap/doppeldock
+          brew install zarinlab/tap/doppeldock
+          doppeldock --version | grep -F "DoppelDock ${{ needs.check.outputs.version }}"
+          brew test zarinlab/tap/doppeldock
+          brew audit --strict --online zarinlab/tap/doppeldock
+
+      - name: Push
+        run: git push

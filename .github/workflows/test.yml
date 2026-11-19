@@ -1,0 +1,35 @@
+name: Test formulae
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Install, test and audit
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      HOMEBREW_NO_ENV_HINTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: shellcheck
+        run: |
+          brew install shellcheck
+          shellcheck -s bash .github/scripts/*.sh
+      - name: doppeldock
+        run: |
+          brew tap zarinlab/tap "$GITHUB_WORKSPACE"
+          brew trust --formula zarinlab/tap/doppeldock
+          brew install zarinlab/tap/doppeldock
+          doppeldock --version
+          brew test zarinlab/tap/doppeldock
+          brew audit --strict --online zarinlab/tap/doppeldock
